@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Domain", "EShop.Domain\EShop.Domain.csproj", "{D75193F9-18DD-4260-9875-611380445FFB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Application", "EShop.Application\EShop.Application.csproj", "{AEE93B1B-4038-4188-B144-6C8CCD800481}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Infrastructure", "EShop.Infrastructure\EShop.Infrastructure.csproj", "{2393A332-9C3E-4F7E-80A8-A3D009D5C26B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.API", "EShop.API\EShop.API.csproj", "{278A2253-C71D-42D0-B63B-C3225B43E842}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.PricingService", "EShop.PricingService\EShop.PricingService.csproj", "{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.Gateway", "EShop.Gateway\EShop.Gateway.csproj", "{783D512C-4548-4DF3-B2CB-B50408C4FACF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.UnitTests", "EShop.UnitTests\EShop.UnitTests.csproj", "{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D75193F9-18DD-4260-9875-611380445FFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D75193F9-18DD-4260-9875-611380445FFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D75193F9-18DD-4260-9875-611380445FFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D75193F9-18DD-4260-9875-611380445FFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEE93B1B-4038-4188-B144-6C8CCD800481}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEE93B1B-4038-4188-B144-6C8CCD800481}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEE93B1B-4038-4188-B144-6C8CCD800481}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEE93B1B-4038-4188-B144-6C8CCD800481}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2393A332-9C3E-4F7E-80A8-A3D009D5C26B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2393A332-9C3E-4F7E-80A8-A3D009D5C26B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2393A332-9C3E-4F7E-80A8-A3D009D5C26B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2393A332-9C3E-4F7E-80A8-A3D009D5C26B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{278A2253-C71D-42D0-B63B-C3225B43E842}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{278A2253-C71D-42D0-B63B-C3225B43E842}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{278A2253-C71D-42D0-B63B-C3225B43E842}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{278A2253-C71D-42D0-B63B-C3225B43E842}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}.Release|Any CPU.Build.0 = Release|Any CPU
+		{783D512C-4548-4DF3-B2CB-B50408C4FACF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{783D512C-4548-4DF3-B2CB-B50408C4FACF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{783D512C-4548-4DF3-B2CB-B50408C4FACF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{783D512C-4548-4DF3-B2CB-B50408C4FACF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {17B59BDE-CEAC-4099-A717-E14D932B848A}
+	EndGlobalSection
+EndGlobal

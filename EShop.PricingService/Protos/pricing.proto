@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+// 定义命名空间 (生成的 C# 代码会用到)
+option csharp_namespace = "EShop.PricingService.Protos";
+
+package pricing;
+
+// 定义服务
+service Pricing {
+  // 定义一个方法：计算最终价格
+  // 接收 PriceRequest，返回 PriceReply
+  rpc CalculatePrice (PriceRequest) returns (PriceReply);
+}
+
+// 定义入参
+message PriceRequest {
+  int64 product_id = 1;
+  int32 quantity = 2;
+  double original_price = 3;
+  string discount_code = 4;
+}
+
+// 定义出参
+message PriceReply {
+  double final_price = 1;
+  string message = 2;
+}
