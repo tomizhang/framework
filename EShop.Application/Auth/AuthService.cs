@@ -80,6 +80,32 @@ namespace EShop.Application.Auth
 
         public async Task<AuthResponseDto> LoginByOpenIdAsync(ExternalLoginDto input)
         {
+            #region 微信
+#if !DEBUG && DEBUG
+            string openId;
+
+            // 1. 根据 Provider 判断找谁换 OpenID
+            if (input.Provider == "WeChat")
+            {
+                // 调用刚才写的服务，把 Code 换成 OpenID
+                // 这就是 AppID 和 AppSecret 发挥作用的地方！
+                openId = await _weChatAuthService.GetOpenIdByCodeAsync(input.Code);
+            }
+            else
+            {
+                throw new Exception("不支持的第三方登录");
+            }
+
+            // 2. 拿到 OpenID 后，剩下的逻辑和之前一模一样（查库、注册、发 Token）
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.OpenId == openId);
+            var result = await _authService.RegisterAsync(new RegisterDto()
+            {
+                Username = user.Username,
+            });
+            return result;
+#endif
+            #endregion
+
             // 1. 先查有没有这个 OpenId 的用户
             var user = await _context.Users.FirstOrDefaultAsync(u => u.OpenId == input.OpenId);
 

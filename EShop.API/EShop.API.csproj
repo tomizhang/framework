@@ -43,6 +43,7 @@
   <ItemGroup>
     <ProjectReference Include="..\EShop.Application\EShop.Application.csproj" />
     <ProjectReference Include="..\EShop.Infrastructure\EShop.Infrastructure.csproj" />
+    <ProjectReference Include="..\EShop.PricingService\EShop.PricingService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
