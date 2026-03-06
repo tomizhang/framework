@@ -35,28 +35,26 @@ namespace EShop.Identity
                 ClientId = "postman_client", // 这里的名字必须和 Postman 里填的一样
                 ClientSecret = "secret",
                 DisplayName = "Postman Client",
-                Permissions =
-                {
-                    // 1. 允许访问端点
-                    OpenIddictConstants.Permissions.Endpoints.Token,
-            
-                    // 2. 允许的授权模式
-                    OpenIddictConstants.Permissions.GrantTypes.Password,
-                    OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                Permissions ={
+                        // 1. 允许访问端点
+                        OpenIddictConstants.Permissions.Endpoints.Token,
 
-                    // 3. 允许的 Scope (权限范围)
-                    // ⚠️ 注意：这里必须和 Postman 里填的 scope 一一对应
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "clinet_app",
-                    //OpenIddictConstants.Permissions.Prefixes.Scope + "openid",
-                    //OpenIddictConstants.Permissions.Prefixes.Scope + "profile",
-                    //OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access"
-                }
+                        // 2. 允许的授权模式
+                        OpenIddictConstants.Permissions.GrantTypes.Password,
+                        OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+                        OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                        // 3. 允许的 Scope (权限范围) 👇 把这些都加上
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "client_app", // 修复了拼写
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "eshop.api",  // 👈 允许申请 eshop.api
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "openid",     // 👈 允许申请 openid (标准)
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "profile"     // 👈 允许申请 profile (标准)
+                    }
 
             });
 
-              // 创建测试用户 (保持不变)
-              var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            // 创建测试用户 (保持不变)
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
             if (await userManager.FindByNameAsync("admin") == null)
             {
                 var user = new IdentityUser { UserName = "admin", Email = "admin@eshop.com" };

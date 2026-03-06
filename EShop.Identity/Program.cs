@@ -34,23 +34,28 @@ builder.Services.AddOpenIddict()
     // 3.2 服务端配置 (Server)
     .AddServer(options =>
     {
-        // 允许的端点 (OpenIddict 不会自动生成 Controller，但会处理这些路由的请求)
-        // 启用需要的端点 (Endpoints)
+        // 允许的端点
         options.SetTokenEndpointUris("/connect/token")
-               .SetAuthorizationEndpointUris("/connect/authorize");
+               .SetAuthorizationEndpointUris("/connect/authorize");// ?????? 新增下面这两行：暴露发现文档和公钥下载端点 ??????
 
         // 允许的授权模式
-        options.AllowPasswordFlow();       // 允许用账号密码换 Token
-        options.AllowClientCredentialsFlow(); // 允许机器直接换 Token
-        options.AllowRefreshTokenFlow();   // 允许刷新 Token
+        options.AllowPasswordFlow();
+        options.AllowClientCredentialsFlow();
+        options.AllowRefreshTokenFlow();
 
-        // 注册签名证书 (开发环境用临时的，生产环境要导入真实证书)
+        // ?????? 【核心修复在这里】明确告诉服务器，这些 Scope 是合法的 ??????
+        options.RegisterScopes("client_app", "eshop.api", "openid", "profile");
+
+        // ?????? 新增这一行：关闭强加密，强制输出标准 JWT ??????
+        options.DisableAccessTokenEncryption();
+
+        // 注册签名证书
         options.AddDevelopmentEncryptionCertificate()
                .AddDevelopmentSigningCertificate();
 
         // 接入 ASP.NET Core 的管道
         options.UseAspNetCore()
-               .EnableTokenEndpointPassthrough(); // 关键：把请求放行给我们的 Controller 处理
+               .EnableTokenEndpointPassthrough();
     })
 
     // 3.3 验证配置 (Validation)

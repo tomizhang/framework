@@ -93,17 +93,17 @@ try
     .AddJwtBearer(options =>
     {
         #region 统一认证中心
-        // ✅ 新配置：指向认证中心
-        options.Authority = "https://localhost:5001"; // 认证中心的地址
-
+        options.Authority = "http://localhost:5001";
+        options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateAudience = false
+            ValidateAudience = false,
+            ValidateIssuer = false,
+            ValidTypes = new[] { "at+jwt" }
         };
-
         #endregion
         #region jwt api单体认证
-#if DEBUG
+#if DEBUG && FALSE
         options.RequireHttpsMetadata = false; // 开发环境允许 http
         options.SaveToken = true;
         var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
@@ -120,6 +120,9 @@ try
         //    ValidateLifetime = true,
         //    ClockSkew = TimeSpan.Zero
         //};
+     
+#endif
+        #endregion
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
@@ -138,8 +141,6 @@ try
                 return Task.CompletedTask;
             }
         };
-#endif
-        #endregion
     });
 
     builder.Services.AddSwaggerGen(c =>
