@@ -79,5 +79,18 @@ namespace EShop.Identity.Controllers
 
             throw new NotImplementedException("这个示例只实现了密码模式");
         }
+
+        [HttpGet(".well-known/openid-configuration")]
+        public FakeOidcConfig GetConfig()
+        {
+            return new FakeOidcConfig();
+        }
+
+        public class FakeOidcConfig
+        {
+            public string issuer { get; set; } = "http://localhost:5001";
+
+            public string jwks_uri { get; set; } = "http://localhost:5001/.well-known/jwks.json";
+        }
     }
 }

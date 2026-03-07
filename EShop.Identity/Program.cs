@@ -2,7 +2,9 @@ using EShop.Identity;
 using EShop.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using OpenIddict.Abstractions; // 引用
+using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Abstractions;
+using System.Text; // 引用
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +40,8 @@ builder.Services.AddOpenIddict()
         options.SetTokenEndpointUris("/connect/token")
                .SetAuthorizationEndpointUris("/connect/authorize");// ?????? 新增下面这两行：暴露发现文档和公钥下载端点 ??????
 
+  
+
         // 允许的授权模式
         options.AllowPasswordFlow();
         options.AllowClientCredentialsFlow();
@@ -48,7 +52,9 @@ builder.Services.AddOpenIddict()
 
         // ?????? 新增这一行：关闭强加密，强制输出标准 JWT ??????
         options.DisableAccessTokenEncryption();
-
+        var secretKey = "MySuperSecretKey_MustBeLongerThan16Chars";
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        options.AddSigningKey(securityKey);
         // 注册签名证书
         options.AddDevelopmentEncryptionCertificate()
                .AddDevelopmentSigningCertificate();
@@ -80,3 +86,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

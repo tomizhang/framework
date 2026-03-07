@@ -17,7 +17,8 @@ using EShop.API.BackgroundServices;
 using EShop.PricingService.Protos;
 using Serilog;
 using EShop.API.Filters;
-using EShop.Infrastructure.Services; // 引用
+using EShop.Infrastructure.Services;
+using System.Text.Json; // 引用
 
 // 1. 初始化 Serilog
 Log.Logger = new LoggerConfiguration()
@@ -93,13 +94,29 @@ try
     .AddJwtBearer(options =>
     {
         #region 统一认证中心
-        options.Authority = "http://localhost:5001";
+        options.Authority = "https://localhost:5001";
         options.RequireHttpsMetadata = false;
+        // 👇👇👇 击杀隐藏 Boss：无视本地 HTTPS 证书安全警告，强制放行请求 👇👇👇
+        //options.BackchannelHttpHandler = new HttpClientHandler
+        //{
+        //    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        //};
+        // 👇👇👇 绝对核心：告诉 API 闭嘴，无视一切 HTTPS 证书报错，强行把公钥给我下载下来！ 👇👇👇
+        //options.BackchannelHttpHandler = new HttpClientHandler
+        //{
+        //    ServerCertificateCustomValidationCallback = delegate { return true; }
+        //};
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            //https://localhost:5001/.well-known/jwks
+            ValidIssuer = "https://localhost:5001",
+            ValidateIssuerSigningKey = false,
             ValidateAudience = false,
             ValidateIssuer = false,
-            ValidTypes = new[] { "at+jwt" }
+            ClockSkew = new TimeSpan(5),
+            ValidTypes = new[] { "at+jwt" },
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MySuperSecretKey_MustBeLongerThan16Chars"))
+
         };
         #endregion
         #region jwt api单体认证
@@ -217,3 +234,10 @@ finally
     Log.CloseAndFlush(); // 确保日志都写进硬盘再退出
 }
 
+async Task<JsonWebKeySet> RetraveSigningKes()
+{
+    //https://localhost:5001/.well-known/jwks
+    var keys = await new HttpClient().GetStringAsync("https://localhost:5001/.well-known/jwks");
+    var res = JsonSerializer.Deserialize<JsonWebKeySet>(keys);
+    return res;
+}
