@@ -18,7 +18,8 @@ using EShop.PricingService.Protos;
 using Serilog;
 using EShop.API.Filters;
 using EShop.Infrastructure.Services;
-using System.Text.Json; // 引用
+using System.Text.Json;
+using EShop.API; // 引用
 
 // 1. 初始化 Serilog
 Log.Logger = new LoggerConfiguration()
@@ -222,6 +223,12 @@ try
     app.UseAuthorization();  // 再安检（你能进吗？）
 
     app.MapControllers();
+
+    // 👇 添加一个极简的健康检查端点，告诉中介 "我还活着"
+    app.MapGet("/health", () => Results.Ok("I am alive!"));
+
+    // 👇 激活 Consul 自动注册
+    app.RegisterConsul(app.Configuration, app.Lifetime);
 
     app.Run();
 }

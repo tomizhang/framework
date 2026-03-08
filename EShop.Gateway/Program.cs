@@ -1,5 +1,6 @@
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using Ocelot.Provider.Consul;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,7 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
 // 2. 注册 Ocelot 服务
-builder.Services.AddOcelot(builder.Configuration);
+// 把原来的 builder.Services.AddOcelot(); 改成：
+builder.Services.AddOcelot().AddConsul(); // ?? 告诉 Ocelot 引入 Consul 寻址能力
 
 var app = builder.Build();
 

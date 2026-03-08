@@ -9,24 +9,24 @@
       // 下游 (真实 API 的地址): localhost:5xxx/api/products
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7001 // ⚠️重要：请去 EShop.API 的 launchSettings.json 确认 https 端口是多少！
-        }
-      ],
+      "ServiceName": "EShop-API",
 
       // --- 🚦 限流配置 (Rate Limiting) ---
-      "RateLimitOptions": {
-        "ClientWhitelist": [], // 白名单
-        "EnableRateLimiting": true,
-        "Period": "10s", // 统计周期：10秒内
-        "Limit": 2, // 最大请求数：只能访问 2 次
-        "PeriodTimespan": 10 // 触发限流后，封禁多少秒
-      }
+      //"RateLimitOptions": {
+      //  "ClientWhitelist": [], // 白名单
+      //  "EnableRateLimiting": true,
+      //  "Period": "10s", // 统计周期：10秒内
+      //  "Limit": 2, // 最大请求数：只能访问 2 次
+      //  "PeriodTimespan": 10 // 触发限流后，封禁多少秒
+      //}
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "https://localhost:9000"
+    "BaseUrl": "http://localhost:9000",
+    "ServiceDiscoveryProvider": {
+      "Host": "localhost",
+      "Port": 8500,
+      "Type": "Consul"
+    }
   }
 }
