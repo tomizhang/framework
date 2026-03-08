@@ -22,6 +22,40 @@ namespace EShop.Identity
 
             var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
+            // 注册 SSO 专用客户端
+            if (await manager.FindByClientIdAsync("eshop_web_spa") == null)
+            {
+                await manager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "eshop_web_spa",
+                    // 对于纯前端 SPA (Vue/React)，甚至可以不需要 Secret，只需配置 RedirectUris
+                    ClientSecret = "spa_secret",
+                    DisplayName = "EShop 前端商城网站",
+
+                    // 👇 极其关键：登录成功后，认证中心要把授权码发到哪个网址？
+                    // 假设你的前端运行在 7002 端口
+                    RedirectUris = { new Uri("http://localhost:7002/signin-oidc") },
+                    PostLogoutRedirectUris = { new Uri("http://localhost:7002/signout-callback-oidc") },
+
+                    Permissions =
+            {
+                // 端点权限
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.Endpoints.EndSession,
+                
+                // 模式权限：允许使用授权码模式 (SSO 的灵魂)
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+                
+                // 允许申请的 Scope
+                OpenIddictConstants.Permissions.Prefixes.Scope + "eshop.api",
+                OpenIddictConstants.Permissions.Prefixes.Scope + "openid",
+                OpenIddictConstants.Permissions.Prefixes.Scope + "profile"
+            }
+                });
+            }
+
             // 👇👇👇 【核心修改】推土机模式：先查找，如果有就删掉 👇👇👇
             var client = await manager.FindByClientIdAsync("postman_client");
             if (client != null)

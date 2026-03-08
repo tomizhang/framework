@@ -6,6 +6,7 @@ using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;
 
 namespace EShop.Identity.Controllers
 {
@@ -24,6 +25,70 @@ namespace EShop.Identity.Controllers
             _applicationManager = applicationManager;
             _userManager = userManager;
             _signInManager = signInManager;
+        }
+
+        [HttpGet("~/connect/authorize")]
+        [HttpPost("~/connect/authorize")]
+        public async Task<IActionResult> Authorize()
+        {
+            var request = HttpContext.GetOpenIddictServerRequest() ??
+                throw new InvalidOperationException("无法获取 OpenID Connect 请求。");
+
+            // 1. 检查当前用户在 Identity Server 这里登录了没有？(有没有 Cookie)
+            var authenticateResult = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+
+            if (!authenticateResult.Succeeded)
+            {
+                // 2. 如果没登录，直接重定向到你的登录页面 (比如 Account/Login)
+                // 直接去掉参数名，干脆利落！
+                return Challenge(
+                    new AuthenticationProperties
+                    {
+                        RedirectUri = Request.PathBase + Request.Path + Request.QueryString
+                    },
+                    IdentityConstants.ApplicationScheme);
+            }
+
+            // 3. 如果已经登录了，开始给他签发一张带着他个人信息的 "门票" (ClaimsPrincipal)
+            var claims = new List<Claim>
+            {
+                // 从当前登录的 Cookie 中获取用户 ID 和用户名
+                new Claim(OpenIddictConstants.Claims.Subject, authenticateResult.Principal.FindFirstValue(ClaimTypes.NameIdentifier)!),
+                new Claim(OpenIddictConstants.Claims.Name, authenticateResult.Principal.Identity!.Name!),
+            };
+
+            var identity = new ClaimsIdentity(claims, TokenValidationParameters.DefaultAuthenticationType);
+
+            // 4. 分配权限 Scope (和你在 Password 模式里写的一样)
+            identity.SetScopes(new[]
+            {
+                OpenIddictConstants.Scopes.OpenId,
+                OpenIddictConstants.Scopes.Profile,
+                "eshop.api"
+            }.Intersect(request.GetScopes()));
+
+            var principal = new ClaimsPrincipal(identity);
+
+            // 5. 决定把哪些 Claim 暴露到 Token 里
+            foreach (var claim in principal.Claims)
+            {
+                claim.SetDestinations(GetDestinations(claim, principal));
+            }
+
+            // 6. 核心动作：同意授权！OpenIddict 会自动生成一个 Code，通过 302 重定向发给业务系统 (eshop_web_spa)
+            return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
+        // 辅助方法：决定信息存放在 AccessToken 还是 IdToken 里
+        private static IEnumerable<string> GetDestinations(Claim claim, ClaimsPrincipal principal)
+        {
+            yield return OpenIddictConstants.Destinations.AccessToken;
+
+            if (claim.Type == OpenIddictConstants.Claims.Name ||
+                claim.Type == OpenIddictConstants.Claims.Subject)
+            {
+                yield return OpenIddictConstants.Destinations.IdentityToken;
+            }
         }
 
         // POST: /connect/token
@@ -76,8 +141,20 @@ namespace EShop.Identity.Controllers
                 // 4. 返回 Token
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
+            else if (request.IsAuthorizationCodeGrantType())
+            {
+                // 1. 获取在 Authorize() 网页登录成功时，封印在 Code 里的用户凭证
+                var authenticateResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
-            throw new NotImplementedException("这个示例只实现了密码模式");
+                // 2. 提取出完整的用户信息
+                var principal = authenticateResult.Principal;
+
+                // 3. 核心动作：同意用 Code 换取 Access Token！
+                return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            // 如果有人拿其他乱七八糟的模式来请求，直接打回票
+            throw new InvalidOperationException("不支持的授权模式。");
         }
 
         [HttpGet(".well-known/openid-configuration")]

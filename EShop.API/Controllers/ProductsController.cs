@@ -27,6 +27,7 @@ namespace EShop.API.Controllers
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateAsync([FromBody] CreateProductDto input)
+
         {
             // 直接调用 Service 层逻辑
             var result = await _productAppService.CreateAsync(input);

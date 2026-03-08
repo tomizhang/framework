@@ -11,13 +11,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Infrastructure", "ESh
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.API", "EShop.API\EShop.API.csproj", "{278A2253-C71D-42D0-B63B-C3225B43E842}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.PricingService", "EShop.PricingService\EShop.PricingService.csproj", "{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.PricingService", "EShop.PricingService\EShop.PricingService.csproj", "{A6C19CDB-2E33-4E50-ADA8-E3AEBE031856}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.Gateway", "EShop.Gateway\EShop.Gateway.csproj", "{783D512C-4548-4DF3-B2CB-B50408C4FACF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Gateway", "EShop.Gateway\EShop.Gateway.csproj", "{783D512C-4548-4DF3-B2CB-B50408C4FACF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.UnitTests", "EShop.UnitTests\EShop.UnitTests.csproj", "{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.UnitTests", "EShop.UnitTests\EShop.UnitTests.csproj", "{F3B31FFE-0886-4937-BF7B-C3AFA16A8CF7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EShop.Identity", "EShop.Identity\EShop.Identity.csproj", "{0541A545-119F-49BB-B950-E48E43CADDD3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Identity", "EShop.Identity\EShop.Identity.csproj", "{0541A545-119F-49BB-B950-E48E43CADDD3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
