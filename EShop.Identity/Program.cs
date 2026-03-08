@@ -22,6 +22,20 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+builder.Services.AddAuthentication()
+    .AddGitHub(options =>
+    {
+        // 填入你刚才在 GitHub 申请到的 ID 和 Secret
+        options.ClientId = "Ov2xxxx";
+        options.ClientSecret = "1acf0xxx";
+
+        // 我们想获取用户的邮箱，所以加上这个 Scope
+        options.Scope.Add("user:email");
+
+        // 👇👇👇 补上这行绝对核心的代码：告诉 GitHub 使用 Identity 的外部登录机制接管 👇👇👇
+        options.SignInScheme = IdentityConstants.ExternalScheme;
+    });
+
 // 3. 配置 OpenIddict (核心配置)
 builder.Services.AddOpenIddict()
 

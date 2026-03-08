@@ -55,7 +55,38 @@ namespace EShop.Identity
             }
                 });
             }
+            #region 其它系统
+            // 场景 1：如果是纯前端 (Vue/React) 或手机 App 接入
+            if (await manager.FindByClientIdAsync("admin_spa") == null)
+            {
+                await manager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "admin_spa",
+                    DisplayName = "后台管理系统 (Vue)",
+                    // 纯前端不安全，不需要 Secret，但必须走带有 PKCE 的授权码模式
+                    RedirectUris = { new Uri("http://localhost:8000/callback") },
+                    Permissions = { /* 给授权码模式的权限，参考你之前的配置 */ }
+                });
+            }
 
+            // 场景 2：如果是后端微服务（比如一个外部的 Java/Go 系统）需要直接调你的 API
+            if (await manager.FindByClientIdAsync("partner_backend") == null)
+            {
+                await manager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "partner_backend",
+                    ClientSecret = "super_strong_password_123", // 后端安全，必须配置 Secret
+                    DisplayName = "第三方数据分析系统",
+                    // 后端通常不需要跳页面，直接用“客户端凭证模式 (Client Credentials)”发 Token
+                    Permissions =
+                    {
+                        OpenIddictConstants.Permissions.Endpoints.Token,
+                        OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "eshop.api"
+                    }
+                });
+            }
+            #endregion
             // 👇👇👇 【核心修改】推土机模式：先查找，如果有就删掉 👇👇👇
             var client = await manager.FindByClientIdAsync("postman_client");
             if (client != null)
