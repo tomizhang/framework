@@ -21,18 +21,31 @@ using EShop.Infrastructure.Services;
 using System.Text.Json;
 using EShop.API;
 using OpenTelemetry.Trace;
-using OpenTelemetry.Resources; // 引用
+using OpenTelemetry.Resources;
+using Serilog.Events; // 引用
 
-// 1. 初始化 Serilog
+
+// 👇 1. 在程序刚跑起来的第一行，就初始化 Serilog 的先遣队
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .Enrich.FromLogContext()
     .WriteTo.Console()
-    .CreateBootstrapLogger(); // 启动引导日志
+    .CreateBootstrapLogger();
 
 
 try
 {
 
+    Log.Information("正在启动 EShop.API 微服务...");
     var builder = WebApplication.CreateBuilder(args);
+
+    // 👇 2. 极其关键：用 Serilog 彻底替换掉系统默认的日志组件
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
+        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}"));
 
     // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
     // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"
@@ -67,11 +80,11 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
-    // 2. 告诉 .NET Core 使用 Serilog 替换默认日志
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration) // 读取 appsettings.json
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext());
+    //// 2. 告诉 .NET Core 使用 Serilog 替换默认日志
+    //builder.Host.UseSerilog((context, services, configuration) => configuration
+    //    .ReadFrom.Configuration(context.Configuration) // 读取 appsettings.json
+    //    .ReadFrom.Services(services)
+    //    .Enrich.FromLogContext());
 
 
     builder.Services.AddAutoMapper(typeof(EShop.Application.EShopApplicationAutoMapperProfile));
