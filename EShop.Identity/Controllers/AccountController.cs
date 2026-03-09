@@ -125,5 +125,21 @@ namespace EShop.Identity.Controllers
                 return Redirect(returnUrl);
             return Content("登录成功！但没有 ReturnUrl。");
         }
+
+        // 接收前端发来的登出请求
+        [HttpGet("~/connect/logout")]
+        [HttpPost("~/connect/logout")]
+        public IActionResult Logout()
+        {
+            // 核心魔法：返回 SignOut 结果。
+            // 1. 清除 Identity 的本地应用 Cookie (让你在 5001 端口真正退出)
+            // 2. 触发 OpenIddict 的登出机制，它会自动读取网址里的 post_logout_redirect_uri 并帮你 302 跳回前端！
+            return SignOut(
+                authenticationSchemes: new[]
+                {
+                    Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme,
+                    OpenIddict.Server.AspNetCore.OpenIddictServerAspNetCoreDefaults.AuthenticationScheme
+                });
+        }
     }
 }
