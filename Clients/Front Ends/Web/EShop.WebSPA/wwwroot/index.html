@@ -94,7 +94,7 @@
                 document.getElementById("result").innerText = "正在请求网关...";
 
                 // 拿着 Token 去调用网关 (假设网关在 9000 端口)
-                fetch("http://localhost:7200/eshop/products", {
+                fetch("http://localhost:7200/eshop/Products/1", {
                     method: "GET",
                     headers: {
                         "Authorization": "Bearer " + user.access_token // 极其关键：在请求头塞入通行证！

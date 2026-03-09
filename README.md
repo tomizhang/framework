@@ -1,4 +1,10 @@
 # 一些注意项目
+* 分布式日志追踪
+  docker run -d --name jaeger \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  jaegertracing/all-in-one:latest
+
 * consul host name 问题
     启动时候需携带 -node=127.0.0.1
     不然hont name会显示主机名称

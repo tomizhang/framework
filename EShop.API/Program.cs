@@ -19,7 +19,9 @@ using Serilog;
 using EShop.API.Filters;
 using EShop.Infrastructure.Services;
 using System.Text.Json;
-using EShop.API; // 引用
+using EShop.API;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources; // 引用
 
 // 1. 初始化 Serilog
 Log.Logger = new LoggerConfiguration()
@@ -31,6 +33,27 @@ try
 {
 
     var builder = WebApplication.CreateBuilder(args);
+
+    // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
+    // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"
+    var serviceName = builder.Environment.ApplicationName;
+
+    builder.Services.AddOpenTelemetry()
+        .WithTracing(tracerProviderBuilder =>
+        {
+            tracerProviderBuilder
+                .AddSource(serviceName)
+                .ConfigureResource(resource => resource.AddService(serviceName))
+                // 1. 自动记录所有进入该微服务的 HTTP 请求
+                .AddAspNetCoreInstrumentation()
+                // 2. 自动记录所有由该微服务发出的 HTTP 请求 (它会自动把 TraceId 塞进请求头传给下游！)
+                .AddHttpClientInstrumentation()
+                // 3. 把收集到的追踪数据，通过 OTLP gRPC 协议发送给本地的 Jaeger 侦探
+                .AddOtlpExporter(opts =>
+                {
+                    opts.Endpoint = new Uri("http://localhost:4317");
+                });
+        });
 
     // Add services to the container.
 
