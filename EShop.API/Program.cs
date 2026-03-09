@@ -252,7 +252,31 @@ try
     app.UseMiddleware<EShop.API.Middlewares.GlobalExceptionMiddleware>();
 
     // 3. 添加请求日志中间件 (这个很强，会自动记录每个 HTTP 请求的耗时、状态码)
-    app.UseSerilogRequestLogging();
+    app.UseSerilogRequestLogging(options =>
+    {
+        // 每次 HTTP 请求结束，准备打印那条漂亮的 summary 日志时，都会触发这个钩子
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            // 1. 抓取请求方的真实 IP
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+            diagnosticContext.Set("ClientIP", string.IsNullOrEmpty(ip) ? "Unknown" : ip);
+
+            // 2. 抓取客户端的设备信息 (比如是用 Chrome 还是 Postman 访问的)
+            var userAgent = httpContext.Request.Headers["User-Agent"].FirstOrDefault();
+            diagnosticContext.Set("UserAgent", userAgent);
+
+            // 3. 抓取当前登录的用户名 (极度关键的业务信息！)
+            // 只要你的 API 配置了 JWT 验证，并且前端带了 Token 过来，这里就能拿到！
+            var userName = httpContext.User?.Identity?.IsAuthenticated == true
+                ? httpContext.User.Identity.Name
+                : "Guest"; // 没登录的统一叫游客
+
+            diagnosticContext.Set("UserName", userName);
+
+            // 4. 你还可以加更多：比如 CorrelationId、订单号、甚至请求的域名
+            // diagnosticContext.Set("Host", httpContext.Request.Host.Value);
+        };
+    });
 
 
     // 👇 必须在 UseRouting 之后，UseAuthorization 之前
