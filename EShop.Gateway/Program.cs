@@ -3,11 +3,29 @@ using Ocelot.Middleware;
 using Ocelot.Provider.Consul;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Serilog.Events;
+using Serilog;
+
+// ?? 1. 在程序刚跑起来的第一行，就初始化 Serilog 的先遣队
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. 加载 ocelot.json 配置文件
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+
+// ?? 2. 极其关键：用 Serilog 彻底替换掉系统默认的日志组件
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Seq("http://localhost:5341"));
 
 // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
 // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"

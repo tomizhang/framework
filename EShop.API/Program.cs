@@ -45,8 +45,9 @@ try
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
-        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}"));
-
+        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}")
+    // 👇👇👇 新增这行极其关键的代码：把日志同时发送给 5341 端口的 Seq 👇👇👇
+        .WriteTo.Seq("http://localhost:5341"));
     // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
     // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"
     var serviceName = builder.Environment.ApplicationName;
