@@ -16,7 +16,7 @@ namespace EShop.API
             // 实际生产中可以从 configuration 读取
             var serviceIp = "127.0.0.1";
             var servicePort = 7001;
-            var serviceName = "EShop-API"; // 👈 这个名字极其重要！网关就靠它找人了
+            var serviceName = "EShop-API-V2"; // 👈 这个名字极其重要！网关就靠它找人了
             var serviceId = $"{serviceName}-{Guid.NewGuid()}";
 
             // 3. 配置注册信息和健康检查
