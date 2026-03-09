@@ -8,6 +8,17 @@ using System.Text; // 引用
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 👇 1. 添加 CORS 策略：允许 7002 访问网关
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSPA", policy =>
+    {
+        policy.WithOrigins("http://localhost:7002") // 允许前端地址
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // 1. 配置数据库 (使用内存数据库，为了快速演示)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
@@ -100,6 +111,8 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHostedService<TestDataWorker>();
 
 var app = builder.Build();
+
+app.UseCors("AllowSPA");
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

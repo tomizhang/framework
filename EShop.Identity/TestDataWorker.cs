@@ -29,30 +29,45 @@ namespace EShop.Identity
                 {
                     ClientId = "eshop_web_spa",
                     // 对于纯前端 SPA (Vue/React)，甚至可以不需要 Secret，只需配置 RedirectUris
-                    ClientSecret = "spa_secret",
+
+                    // 👇 极其关键：纯前端绝对不能有 ClientSecret = "..." 这行代码！删掉它！
+                    //ClientSecret = "spa_secret",
+                    // 👇 极其关键：告诉发证局，这是一个没有密码的公共客户端，但它必须使用 PKCE 安全机制
+                    Requirements =
+                    {
+                        OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange
+                    },
                     DisplayName = "EShop 前端商城网站",
 
                     // 👇 极其关键：登录成功后，认证中心要把授权码发到哪个网址？
                     // 假设你的前端运行在 7002 端口
-                    RedirectUris = { new Uri("http://localhost:7002/signin-oidc") },
-                    PostLogoutRedirectUris = { new Uri("http://localhost:7002/signout-callback-oidc") },
+                    RedirectUris = { new Uri("http://localhost:7002/signin-oidc"),new Uri("http://localhost:7002/index.html") },
+                    PostLogoutRedirectUris = { new Uri("http://localhost:7002/signout-callback-oidc"),new Uri("http://localhost:7002/index.html") },
 
                     Permissions =
-            {
-                // 端点权限
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.Endpoints.EndSession,
+                    {
+
+                                // 👇👇👇 1. 允许这个客户端使用 "刷新令牌模式" 换取新 Token 👇👇👇
+                        OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
                 
-                // 模式权限：允许使用授权码模式 (SSO 的灵魂)
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.ResponseTypes.Code,
+                        // 👇👇👇 2. 允许这个客户端申请 "offline_access" (离线访问) 权限范围 👇👇👇
+                        OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.OfflineAccess,
+
+                        // 端点权限
+                        OpenIddictConstants.Permissions.Endpoints.Authorization,
+                        OpenIddictConstants.Permissions.Endpoints.Token,
+                        OpenIddictConstants.Permissions.Endpoints.EndSession,
                 
-                // 允许申请的 Scope
-                OpenIddictConstants.Permissions.Prefixes.Scope + "eshop.api",
-                OpenIddictConstants.Permissions.Prefixes.Scope + "openid",
-                OpenIddictConstants.Permissions.Prefixes.Scope + "profile"
-            }
+                        // 模式权限：允许使用授权码模式 (SSO 的灵魂)
+                        OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                        OpenIddictConstants.Permissions.ResponseTypes.Code,
+                        OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                
+                        // 允许申请的 Scope
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "eshop.api",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "openid",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "profile"
+                    }
                 });
             }
             #region 其它系统

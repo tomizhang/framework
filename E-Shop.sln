@@ -19,6 +19,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.UnitTests", "EShop.Un
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.Identity", "EShop.Identity\EShop.Identity.csproj", "{0541A545-119F-49BB-B950-E48E43CADDD3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{6A7BD8D4-AE46-483D-8BAF-A6FA45B6606F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Front Ends", "Front Ends", "{DD92C54E-976D-4AFE-B421-2180596F509C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Web", "Web", "{A97D9D72-B737-4D47-96E4-4C5FC616AEDF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EShop.WebSPA", "Clients\Front Ends\Web\EShop.WebSPA\EShop.WebSPA.csproj", "{3259B33D-113D-4D64-ABA1-8407188A279C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,9 +65,18 @@ Global
 		{0541A545-119F-49BB-B950-E48E43CADDD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0541A545-119F-49BB-B950-E48E43CADDD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0541A545-119F-49BB-B950-E48E43CADDD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3259B33D-113D-4D64-ABA1-8407188A279C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3259B33D-113D-4D64-ABA1-8407188A279C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3259B33D-113D-4D64-ABA1-8407188A279C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3259B33D-113D-4D64-ABA1-8407188A279C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DD92C54E-976D-4AFE-B421-2180596F509C} = {6A7BD8D4-AE46-483D-8BAF-A6FA45B6606F}
+		{A97D9D72-B737-4D47-96E4-4C5FC616AEDF} = {DD92C54E-976D-4AFE-B421-2180596F509C}
+		{3259B33D-113D-4D64-ABA1-8407188A279C} = {A97D9D72-B737-4D47-96E4-4C5FC616AEDF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {17B59BDE-CEAC-4099-A717-E14D932B848A}

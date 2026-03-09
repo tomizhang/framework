@@ -1,0 +1,114 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>EShop 前端 SSO 实战</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/oidc-client/1.11.5/oidc-client.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+            button:hover {
+                background: #0056b3;
+            }
+
+        #result {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h2>前端 SPA 认证</h2>
+
+    <div id="btn-group">
+        <button id="btnLogin">1. 登录 (跳转 Identity)</button>
+        <button id="btnApi">2. 调用网关 API (携带 Token)</button>
+        <button id="btnLogout">3. 注销 (清空凭证)</button>
+    </div>
+
+    <pre id="result">系统就绪，请点击登录...</pre>
+
+    <script>
+        // 1. 配置 OIDC (与 Identity 发证局对齐)
+        const config = {
+            authority: "https://localhost:5001",    // 发证局地址
+            client_id: "eshop_web_spa",             // 我们的前端身份
+            redirect_uri: "http://localhost:7002/index.html", // 登录成功跳回哪里
+            response_type: "code",                  // 开启授权码模式 (默认自带 PKCE)
+            scope: "openid profile eshop.api offline_access", // 索要的权限 (包含离线刷新)
+            post_logout_redirect_uri: "http://localhost:7002/index.html",
+            loadUserInfo: false
+        };
+
+        // 实例化 Manager
+        const mgr = new Oidc.UserManager(config);
+
+        // 2. 检查是不是刚从 Identity 登录成功跳回来的？
+        if (window.location.search.includes("code=")) {
+            document.getElementById("result").innerText = "正在从发证局换取 Token，请稍候...";
+            // 自动拿 URL 里的 code 去换取真正的 AccessToken 和 RefreshToken
+            mgr.signinRedirectCallback().then(function (user) {
+                // 抹掉地址栏里难看的 code 参数
+                window.history.replaceState({}, window.document.title, window.location.pathname);
+                document.getElementById("result").innerText = "🎉 登录成功！获取到的用户信息：\n\n" + JSON.stringify(user, null, 2);
+            }).catch(function (err) {
+                document.getElementById("result").innerText = "登录失败: " + err;
+            });
+        }
+        else {
+            // 尝试从浏览器本地存储加载已有的用户凭证
+            mgr.getUser().then(user => {
+                if (user) {
+                    document.getElementById("result").innerText = "欢迎回来！你已登录。\nAccessToken: " + user.access_token;
+                }
+            });
+        }
+
+        // 3. 绑定按钮点击事件
+        document.getElementById("btnLogin").onclick = () => mgr.signinRedirect(); // 触发跳转
+        document.getElementById("btnLogout").onclick = () => mgr.signoutRedirect(); // 触发注销
+
+        document.getElementById("btnApi").onclick = () => {
+            mgr.getUser().then(user => {
+                if (!user) {
+                    alert("请先登录！"); return;
+                }
+
+                document.getElementById("result").innerText = "正在请求网关...";
+
+                // 拿着 Token 去调用网关 (假设网关在 9000 端口)
+                fetch("http://localhost:7200/eshop/products", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + user.access_token // 极其关键：在请求头塞入通行证！
+                    }
+                })
+                .then(res => res.text())
+                .then(data => {
+                    document.getElementById("result").innerText = "✅ 网关返回数据：\n\n" + data;
+                })
+                .catch(err => {
+                    document.getElementById("result").innerText = "❌ 请求失败 (大概率是跨域 CORS 拦截)：\n" + err;
+                });
+            });
+        };
+    </script>
+</body>
+</html>

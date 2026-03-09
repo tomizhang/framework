@@ -133,7 +133,9 @@ namespace EShop.Identity.Controllers
                 {
                     Scopes.OpenId,
                     Scopes.Profile,
-                    "eshop.api"
+                    "eshop.api",
+                    // 👇👇👇 把 OfflineAccess 加到允许发放的名单里 👇👇👇
+                    OpenIddictConstants.Scopes.OfflineAccess
                 }.Intersect(request.GetScopes()));
 
                 var principal = new ClaimsPrincipal(identity);
@@ -152,7 +154,18 @@ namespace EShop.Identity.Controllers
                 // 3. 核心动作：同意用 Code 换取 Access Token！
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
+            // 👇👇👇 新增：处理 "刷新令牌模式" (Refresh Token Flow) 👇👇👇
+            else if (request.IsRefreshTokenGrantType())
+            {
+                // 1. 获取封印在旧 Refresh Token 里的用户凭证 (OpenIddict 已经帮我们验证了它的合法性和有效期)
+                var authenticateResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
+                // 2. 把用户信息原封不动地提出来
+                var principal = authenticateResult.Principal;
+
+                // 3. 核心动作：直接签发一对全新的 Access Token 和 Refresh Token！
+                return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
             // 如果有人拿其他乱七八糟的模式来请求，直接打回票
             throw new InvalidOperationException("不支持的授权模式。");
         }
