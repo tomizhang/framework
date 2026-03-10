@@ -7,6 +7,7 @@ using System.Security.Claims;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 
 namespace EShop.Identity.Controllers
 {
@@ -168,6 +169,46 @@ namespace EShop.Identity.Controllers
             }
             // 如果有人拿其他乱七八糟的模式来请求，直接打回票
             throw new InvalidOperationException("不支持的授权模式。");
+        }
+
+        // 👇 1. 挂上保安：必须携带合法的 Access Token 才能访问这个接口！
+        [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
+        [HttpGet("~/connect/userinfo")]
+        [HttpPost("~/connect/userinfo")]
+        public async Task<IActionResult> Userinfo()
+        {
+            // 2. 从极简 Token 里提取出最核心的用户 ID (Subject)
+            var subject = User.GetClaim(OpenIddictConstants.Claims.Subject);
+            if (string.IsNullOrEmpty(subject))
+            {
+                return Challenge(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidToken,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Token 中缺少用户 ID。"
+                    }));
+            }
+
+            // 3. 真正的企业级实战：用这个 ID 去查数据库！
+            // 这里假设你注入了 _userManager，真实场景应该这样写：
+            // var user = await _userManager.FindByIdAsync(subject);
+            // if (user == null) return Challenge(...);
+
+            // 4. 组装丰满的用户档案返回给前端 (绝对不要包含密码等极度敏感数据)
+            var claims = new Dictionary<string, object>
+            {
+                [OpenIddictConstants.Claims.Subject] = subject,
+                // 这里我们模拟一下从数据库查出来的详细业务数据
+                ["name"] = User.Identity?.Name ?? "铁柱",
+                ["email"] = "developer@eshop.com",
+                ["phone"] = "138-8888-8888",
+                ["location"] = "新加坡", // 模拟真实业务里的常驻地等扩展信息
+                ["vip_level"] = "Gold",
+                ["preferences"] = new[] { "Electronics", "Books" } // 甚至可以传数组或嵌套对象
+            };
+
+            return Ok(claims);
         }
 
         [HttpGet(".well-known/openid-configuration")]

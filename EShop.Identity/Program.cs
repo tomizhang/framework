@@ -64,7 +64,9 @@ builder.Services.AddOpenIddict()
         // 👇👇👇 必须显式声明这三个核心端点的门牌号 👇👇👇
         options.SetTokenEndpointUris("/connect/token")
                .SetAuthorizationEndpointUris("/connect/authorize")
-               .SetEndSessionEndpointUris("/connect/logout");
+               .SetEndSessionEndpointUris("/connect/logout");// 👇 极其关键：开启 UserInfo 档案查询端点
+
+        options.SetUserInfoEndpointUris("/connect/userinfo");
 
         // 允许的授权模式
         options.AllowPasswordFlow();
@@ -93,7 +95,8 @@ builder.Services.AddOpenIddict()
                // 👇👇👇 补上下面这行！告诉 OpenIddict 把授权请求放行给我们的 Controller 👇👇👇
                .EnableAuthorizationEndpointPassthrough()
                // 👇👇👇 既然在做 SSO，顺便把登出请求也放行了（如果用的是 OpenIddict 6.x，可能叫 EnableEndSessionEndpointPassthrough）👇👇👇
-               .EnableEndSessionEndpointPassthrough();
+               .EnableEndSessionEndpointPassthrough()
+               .EnableUserInfoEndpointPassthrough();
     })
 
     // 3.3 验证配置 (Validation)
