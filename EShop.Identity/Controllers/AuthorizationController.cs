@@ -97,9 +97,12 @@ namespace EShop.Identity.Controllers
         public async Task<IActionResult> Exchange()
         {
             // 1. 解析请求 (OpenIddict 帮我们解析好了)
-            var request = HttpContext.GetOpenIddictServerRequest();
+            var request = HttpContext.GetOpenIddictServerRequest()
+                ?? throw new InvalidOperationException("无法获取 OpenID Connect 请求。");
 
-            // 2. 处理 "密码模式" (Password Flow)
+            // ====================================================================
+            // 模式一：处理 "密码模式" (Password Flow)
+            // ====================================================================
             if (request.IsPasswordGrantType())
             {
                 var user = await _userManager.FindByNameAsync(request.Username);
@@ -107,67 +110,100 @@ namespace EShop.Identity.Controllers
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "用户名或密码错误"
                     }));
 
                 var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
                 if (!result.Succeeded) return Forbid(
-                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                     properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                     {
-                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "用户名或密码错误"
-                     }));
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "用户名或密码错误"
+                    }));
 
                 // 3. 登录成功，创建票据 (Principal)
                 var identity = new ClaimsIdentity(
                     authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-                    nameType: Claims.Name,
-                    roleType: Claims.Role);
+                    nameType: OpenIddictConstants.Claims.Name,
+                    roleType: OpenIddictConstants.Claims.Role);
 
-                identity.AddClaim(Claims.Subject, await _userManager.GetUserIdAsync(user));
-                identity.AddClaim(Claims.Name, await _userManager.GetUserNameAsync(user));
+                // 写入基础信息
+                identity.AddClaim(OpenIddictConstants.Claims.Subject, await _userManager.GetUserIdAsync(user));
+                identity.AddClaim(OpenIddictConstants.Claims.Name, await _userManager.GetUserNameAsync(user));
+
+                // 👇👇👇 新增核心逻辑：从数据库查出该用户的所有角色，并写进 Identity 中 👇👇👇
+                var roles = await _userManager.GetRolesAsync(user);
+                foreach (var role in roles)
+                {
+                    identity.AddClaim(OpenIddictConstants.Claims.Role, role);
+                }
 
                 // 必须加上 Scope 权限
                 identity.SetScopes(new[]
                 {
-                    Scopes.OpenId,
-                    Scopes.Profile,
+                    OpenIddictConstants.Scopes.OpenId,
+                    OpenIddictConstants.Scopes.Profile,
                     "eshop.api",
-                    // 👇👇👇 把 OfflineAccess 加到允许发放的名单里 👇👇👇
-                    OpenIddictConstants.Scopes.OfflineAccess
+                    OpenIddictConstants.Scopes.OfflineAccess // 允许刷新令牌
                 }.Intersect(request.GetScopes()));
 
                 var principal = new ClaimsPrincipal(identity);
 
+                // 👇👇👇 核心魔法：遍历所有 Claim，告诉 OpenIddict 把它们打包进 Access Token 👇👇👇
+                foreach (var claim in principal.Claims)
+                {
+                    // 如果是角色声明，或者是 Subject/Name 声明，允许它们进入 Token
+                    if (claim.Type == System.Security.Claims.ClaimTypes.Role || claim.Type == "role" ||
+                        claim.Type == OpenIddictConstants.Claims.Subject || claim.Type == OpenIddictConstants.Claims.Name)
+                    {
+                        claim.SetDestinations(OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken);
+                    }
+                }
+
                 // 4. 返回 Token
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
-            else if (request.IsAuthorizationCodeGrantType())
+            // ====================================================================
+            // 模式二 & 三：处理 "授权码模式" (Authorization Code) 和 "刷新令牌模式" (Refresh Token)
+            // ====================================================================
+            else if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
             {
-                // 1. 获取在 Authorize() 网页登录成功时，封印在 Code 里的用户凭证
-                var authenticateResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                // 💡 提示：这两种模式的核心逻辑一模一样（都是取出旧票据，换发新票据），所以合并处理使代码更优雅
 
-                // 2. 提取出完整的用户信息
+                // 1. 获取封印在旧凭证（Code 或 Refresh Token）里的用户信息
+                var authenticateResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
                 var principal = authenticateResult.Principal;
 
-                // 3. 核心动作：同意用 Code 换取 Access Token！
-                return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
-            // 👇👇👇 新增：处理 "刷新令牌模式" (Refresh Token Flow) 👇👇👇
-            else if (request.IsRefreshTokenGrantType())
-            {
-                // 1. 获取封印在旧 Refresh Token 里的用户凭证 (OpenIddict 已经帮我们验证了它的合法性和有效期)
-                var authenticateResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                if (principal == null)
+                {
+                    return Forbid(
+                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                        properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
+                        {
+                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "提供的票据无效或已过期。"
+                        }));
+                }
 
-                // 2. 把用户信息原封不动地提出来
-                var principal = authenticateResult.Principal;
+                // 👇👇👇 同样的核心魔法：确保旧票据里的角色信息，在换发新 Token 时依然能被正确打包 👇👇👇
+                foreach (var claim in principal.Claims)
+                {
+                    if (claim.Type == System.Security.Claims.ClaimTypes.Role || claim.Type == "role" ||
+                        claim.Type == OpenIddictConstants.Claims.Subject || claim.Type == OpenIddictConstants.Claims.Name)
+                    {
+                        claim.SetDestinations(OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken);
+                    }
+                }
 
                 // 3. 核心动作：直接签发一对全新的 Access Token 和 Refresh Token！
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
-            // 如果有人拿其他乱七八糟的模式来请求，直接打回票
+
+            // ====================================================================
+            // 兜底：如果有人拿其他乱七八糟的模式来请求，直接打回票
+            // ====================================================================
             throw new InvalidOperationException("不支持的授权模式。");
         }
 

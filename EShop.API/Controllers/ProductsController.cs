@@ -38,6 +38,7 @@ namespace EShop.API.Controllers
         }
 
         // 以后我们要在这里加 [HttpGet] 用来查商品
+        [Authorize(Policy = "DynamicRBAC")]
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetAsync(long id)

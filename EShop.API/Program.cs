@@ -22,7 +22,9 @@ using System.Text.Json;
 using EShop.API;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Resources;
-using Serilog.Events; // 引用
+using Serilog.Events;
+using EShop.API.Security;
+using Microsoft.AspNetCore.Authorization; // 引用
 
 
 // 👇 1. 在程序刚跑起来的第一行，就初始化 Serilog 的先遣队
@@ -51,6 +53,9 @@ try
     // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
     // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"
     var serviceName = builder.Environment.ApplicationName;
+
+    // 👇 极其关键：系统默认是不提供 HttpContext 的，必须手动把这个“雷达”注册进 DI 容器里！
+    builder.Services.AddHttpContextAccessor();
 
     builder.Services.AddOpenTelemetry()
         .WithTracing(tracerProviderBuilder =>
@@ -152,6 +157,7 @@ try
             ValidateAudience = false,
             ValidateIssuer = false,
             ClockSkew = new TimeSpan(5),
+            RoleClaimType = "role", // 极其关键：告诉 API 哪个字段是角色
             ValidTypes = new[] { "at+jwt" },
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MySuperSecretKey_MustBeLongerThan16Chars"))
 
@@ -237,6 +243,19 @@ try
         // ⚠️ 这里填 EShop.PricingService 启动的 HTTPS 地址
         o.Address = new Uri("https://localhost:7194");
     });
+
+    // 👇 1. 注册我们的动态安检策略
+    builder.Services.AddAuthorization(options =>
+    {
+        // 👇 2. 注册唯一的全局动态策略
+        options.AddPolicy("DynamicRBAC", policy =>
+        {
+            policy.Requirements.Add(new DynamicPermissionRequirement());
+        });
+    });
+
+    // 👇 2. 极其关键：把大队长注册到依赖注入容器里，这样他才能用到 EF Core 去查库！
+    builder.Services.AddScoped<IAuthorizationHandler, DynamicPermissionHandler>();
 
     var app = builder.Build();
 

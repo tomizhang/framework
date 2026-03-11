@@ -17,6 +17,19 @@ namespace EShop.Identity
         {
             using var scope = _serviceProvider.CreateScope();
 
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+
+            // 1. 初始化核心角色
+            string[] roleNames = { "Admin", "User", "Manager" };
+            foreach (var roleName in roleNames)
+            {
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(roleName));
+                }
+            }
+
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await context.Database.EnsureCreatedAsync();
 
@@ -134,11 +147,16 @@ namespace EShop.Identity
             });
 
             // 创建测试用户 (保持不变)
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            //var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
             if (await userManager.FindByNameAsync("admin") == null)
             {
                 var user = new IdentityUser { UserName = "admin", Email = "admin@eshop.com" };
-                await userManager.CreateAsync(user, "Password123!");
+                var result =  await userManager.CreateAsync(user, "Password123!");
+                if (result.Succeeded)
+                {
+                    // 极其关键：把用户塞进管理员角色里！
+                    await userManager.AddToRolesAsync(user,new List<string> { "Admin" , "Manager" });
+                }
             }
         }
 
