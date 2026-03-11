@@ -28,3 +28,5 @@ dotnet ef database update --project EShop.Infrastructure --startup-project EShop
  4. 注意踩坑点
 如果新迁移文件 up方法没有即为空白时候 up(){ nothing。。。} 即为这次迁移和上次比较并没有差别所以无变化，
 解决方式:删除所有迁移文件或者删除上次迁移修改部分
+
+# test
