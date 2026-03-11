@@ -18,6 +18,7 @@ namespace EShop.Infrastructure.Data
         public DbSet<Product> Products { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
         // 3. 实体配置 (Fluent API)
         // 推荐在这里配置数据库规则，保持实体类纯净
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -56,6 +57,17 @@ namespace EShop.Infrastructure.Data
                 entity.Property(u => u.Username).HasMaxLength(50).IsRequired();
                 entity.Property(u => u.Email).HasMaxLength(100);
             });
+
+            // 给系统老板 (Admin) 留个后门，允许他 POST 创建商品
+            modelBuilder.Entity<RolePermission>().HasData(
+                new RolePermission
+                {
+                    Id = 1,
+                    RoleName = "Admin",
+                    Path = "/api/products",
+                    Method = "POST"
+                }
+            );
         }
     }
 }

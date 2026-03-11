@@ -1,5 +1,6 @@
 ﻿using EShop.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace EShop.API.Security
@@ -7,7 +8,7 @@ namespace EShop.API.Security
     public class DynamicPermissionHandler : AuthorizationHandler<DynamicPermissionRequirement>
     {
         private readonly EShopDbContext _dbContext;
-        private readonly IHttpContextAccessor _httpContextAccessor; // 👈 召唤雷达
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public DynamicPermissionHandler(EShopDbContext dbContext, IHttpContextAccessor httpContextAccessor)
         {
@@ -15,47 +16,40 @@ namespace EShop.API.Security
             _httpContextAccessor = httpContextAccessor;
         }
 
+        // 引入必要的命名空间
+
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, DynamicPermissionRequirement requirement)
         {
             if (context.User.Identity == null || !context.User.Identity.IsAuthenticated) return;
 
-            // 1. 抓取当前请求的 URL 和 Method！
             var httpContext = _httpContextAccessor.HttpContext;
             if (httpContext == null) return;
 
-            var requestPath = httpContext.Request.Path.Value?.ToLower(); // 比如："/api/products"
-            var httpMethod = httpContext.Request.Method.ToUpper();       // 比如："POST"
+            // 👇👇👇 核心超进化：不抓真实 URL，去抓底层路由引擎的“匹配模板”！
+            var endpoint = httpContext.GetEndpoint() as RouteEndpoint;
+            if (endpoint == null) return; // 如果不是一个有效的 API 端点，直接忽略
 
-            // 2. 从 Token 中掏出该用户所有的角色 (我们在 Identity 里塞进去的 role)
+            // 拿到类似 "api/products/{id}" 的原始模板字符串
+            var routeTemplate = endpoint.RoutePattern.RawText?.ToLower();
+
+            // 补齐前面的斜杠，变成标准化格式 "/api/products/{id}"
+            var normalizedTemplate = "/" + routeTemplate?.TrimStart('/');
+
+            var httpMethod = httpContext.Request.Method.ToUpper();
+
             var userRoles = context.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
             if (!userRoles.Any()) return;
 
-            // 3. 终极查库：这个用户的任意一个角色，是否被允许用这个 Method 访问这个 Path？
-            /* // 真实业务里的 EF Core 查库代码大概长这样：
-            bool hasPermission = await _dbContext.RoleApiPermissions
-                .AnyAsync(p => userRoles.Contains(p.RoleName) 
-                            && p.ApiPath == requestPath 
-                            && p.HttpMethod == httpMethod);
-            */
+            // 👇 极其精准的数据库比对：用标准化模板去查库！
+            bool hasPermission = await _dbContext.RolePermissions
+                .AnyAsync(p => userRoles.Contains(p.RoleName)
+                            && p.Path.ToLower() == normalizedTemplate
+                            && p.Method.ToUpper() == httpMethod);
 
-            // 💡 模拟查库
-            bool hasPermission = SimulateCheckDatabase(userRoles, requestPath, httpMethod);
-
-            // 4. 宣判
             if (hasPermission)
             {
-                context.Succeed(requirement); // 放行！
+                context.Succeed(requirement);
             }
-        }
-
-        private bool SimulateCheckDatabase(List<string> roles, string path, string method)
-        {
-            // 假设数据库里配置了：Admin 角色可以 POST /api/products
-            if (roles.Contains("Admin") && path.StartsWith( "/api/products" )&& method == "GET")
-            {
-                return true;
-            }
-            return false;
         }
     }
 }

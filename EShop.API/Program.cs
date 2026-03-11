@@ -122,7 +122,9 @@ try
     // 2. 注册 DbContext
     // 告诉系统：我要用 PostgreSQL，连接字符串是上面那个
     builder.Services.AddDbContext<EShopDbContext>(options =>
-        options.UseNpgsql(connectionString));
+        options.UseNpgsql(connectionString,
+        // 记得指路，告诉它迁移大本营在基础设施层
+        b => b.MigrationsAssembly("EShop.Infrastructure")));
 
     builder.Services.AddHttpClient<WeChatAuthService>();
 
@@ -311,6 +313,11 @@ try
     app.RegisterConsul(app.Configuration, app.Lifetime);
 
     app.Run();
+}// 👇 加上这个极其关键的专属捕获块：过滤掉 EF Core 工具的正常中止动作！
+catch (HostAbortedException)
+{
+    // EF Core 迁移工具在提取完元数据后会抛出此异常，属于正常现象，静默忽略即可。
+    Log.Information("EF Core 工具提取配置完毕，正常中止 Host。");
 }
 catch (Exception ex)
 {
