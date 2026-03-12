@@ -46,6 +46,7 @@ try
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
+        .Enrich.WithMachineName() // 👈 让每一条日志都自动带上 MachineName 属性！
         // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
         .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}")
     // 👇👇👇 新增这行极其关键的代码：把日志同时发送给 5341 端口的 Seq 👇👇👇
@@ -270,6 +271,7 @@ try
     app.UseRouting();
 
     // ✅ 注册全局异常中间件
+    app.UseMiddleware<EShop.API.Middlewares.CommonMiddleware>();
     app.UseMiddleware<EShop.API.Middlewares.GlobalExceptionMiddleware>();
 
     // 3. 添加请求日志中间件 (这个很强，会自动记录每个 HTTP 请求的耗时、状态码)

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Text.Json;
 
 namespace EShop.API.Middlewares
@@ -38,10 +39,14 @@ namespace EShop.API.Middlewares
             // 根据异常类型决定状态码 (这里简单统一为 500，也可以根据业务异常细分)
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
+            // 👇 极其核心：优先获取 OpenTelemetry/Jaeger 的标准分布式追踪 ID
+            // 如果没有开启分布式追踪，就降级使用 ASP.NET Core 自动生成的请求 ID
+            var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
             var response = new
             {
                 StatusCode = context.Response.StatusCode,
                 Message = "服务器开小差了，请联系管理员", // 生产环境不要把 ex.Message 直接给前端，不安全
+                TraceId = traceId,
                 DetailedError = exception.Message // 开发环境可以把这个加上方便调试
             };
 

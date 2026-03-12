@@ -107,5 +107,12 @@ namespace EShop.API.Controllers
                 note = reply.Message
             });
         }
+
+        [HttpGet("throw-exption")]
+        public async Task<IActionResult> ThrowExption()
+        {
+            // 人为制造一场灾难！
+            throw new Exception("数据库突然原地爆炸了！");
+        }
     }
 }
