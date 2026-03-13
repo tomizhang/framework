@@ -24,7 +24,8 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Resources;
 using Serilog.Events;
 using EShop.API.Security;
-using Microsoft.AspNetCore.Authorization; // 引用
+using Microsoft.AspNetCore.Authorization;
+using OpenTelemetry.Metrics; // 引用
 
 
 // 👇 1. 在程序刚跑起来的第一行，就初始化 Serilog 的先遣队
@@ -73,7 +74,20 @@ try
                 {
                     opts.Endpoint = new Uri("http://localhost:4317");
                 });
-        });
+        })
+        .WithMetrics(metrics =>
+        {
+            metrics
+                        // 1. 【修复 CS1929】直接监听 .NET 8 内置的 API 和 Web 服务器原声指标！
+                        .AddMeter("Microsoft.AspNetCore.Hosting")
+                        .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
+
+                        // 2. 运行时底层监控（CPU、内存等）保持不变
+                        .AddRuntimeInstrumentation()
+
+                        // 3. 导出给 Prometheus
+                        .AddPrometheusExporter();
+        }); ;
 
     // Add services to the container.
 
@@ -307,6 +321,8 @@ try
     app.UseAuthentication(); // 先验票（你是谁？）
     app.UseAuthorization();  // 再安检（你能进吗？）
 
+    //app.UseOpenTelemetryPrometheusScrapingEndpoint();
+    app.MapPrometheusScrapingEndpoint();
     app.MapControllers();
 
     // 👇 添加一个极简的健康检查端点，告诉中介 "我还活着"

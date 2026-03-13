@@ -19,6 +19,13 @@
       //  "Limit": 2, // 最大请求数：只能访问 2 次
       //  "PeriodTimespan": 10 // 触发限流后，封禁多少秒
       //}
+    },
+    {
+      "UpstreamPathTemplate": "/api-metrics",
+      "UpstreamHttpMethod": [ "Get" ],
+      "DownstreamPathTemplate": "/metrics",
+      "DownstreamScheme": "http",
+      "ServiceName": "EShop-API-V2" // 让网关把请求转给底层的监控口
     }
   ],
   "GlobalConfiguration": {
