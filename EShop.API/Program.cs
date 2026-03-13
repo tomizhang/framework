@@ -82,6 +82,7 @@ try
         // 添加全局过滤器
         // 这样每个 Controller 的每个方法都会经过这个 Filter
         options.Filters.Add<LogTimeFilter>();
+        options.Filters.Add<GlobalResponseFilter>();
     });
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
