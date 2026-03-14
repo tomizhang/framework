@@ -60,6 +60,28 @@ try
     // 👇 极其关键：系统默认是不提供 HttpContext 的，必须手动把这个“雷达”注册进 DI 容器里！
     builder.Services.AddHttpContextAccessor();
 
+    // 👇 极其霸气的大厂标准：给所有调用下游的 HTTP 客户端套上“防弹衣”！
+    builder.Services.AddHttpClient("DownstreamServiceClient", client =>
+    {
+        // 假设这是你要调用的下游服务地址
+        client.BaseAddress = new Uri("http://localhost:5001");
+    })
+    // 极其核心的魔法：一键注入大厂标准弹性策略（包含了超时、重试、熔断三板斧！）
+    .AddStandardResilienceHandler(options =>
+    {
+        // 1. 重试策略：遇到瞬时网络抖动，系统会自动偷偷重试，最多 3 次。
+        options.Retry.MaxRetryAttempts = 3;
+
+        // 2. 熔断策略（防雪崩）：如果 10 秒内，失败率超过 10%，直接拉闸断电！
+        options.CircuitBreaker.FailureRatio = 0.1;
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+        // 拉闸后，系统进入“偷懒休息”状态 30 秒，期间任何请求直接秒回失败，绝不干等！
+        options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+
+        // 3. 全局超时：任何请求超过 5 秒不理我，直接强行掐断，抛出超时异常！
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(5);
+    });
+
     builder.Services.AddOpenTelemetry()
         .WithTracing(tracerProviderBuilder =>
         {

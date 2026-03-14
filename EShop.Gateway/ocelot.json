@@ -28,6 +28,11 @@
       "ServiceName": "EShop-API-V2" // 让网关把请求转给底层的监控口
     }
   ],
+  "QoSOptions": {
+    "ExceptionsAllowedBeforeBreaking": 3, // 连续报错 3 次就熔断
+    "DurationOfBreak": 10000, // 休息 10 秒
+    "TimeoutValue": 5000 // 5 秒超时
+  },
   "GlobalConfiguration": {
     "BaseUrl": "http://localhost:9000",
     "ServiceDiscoveryProvider": {

@@ -4,6 +4,7 @@ using EShop.Application.Products.Dtos;
 using EShop.PricingService.Protos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
 using static EShop.PricingService.Protos.Pricing;
 
 namespace EShop.API.Controllers
@@ -15,13 +16,15 @@ namespace EShop.API.Controllers
         private readonly IProductAppService _productAppService;
         private readonly IConfiguration _configuration;
         private readonly PricingClient _pricingClient;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         // 构造函数注入：我们要用 Application 层的服务
-        public ProductsController(IProductAppService productAppService, PricingClient pricingClient,IConfiguration configuration)
+        public ProductsController(IProductAppService productAppService, PricingClient pricingClient, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _productAppService = productAppService;
             _pricingClient = pricingClient;
             _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
         }
 
         // 1. 创建商品接口
@@ -123,6 +126,18 @@ namespace EShop.API.Controllers
             // 直接像读取本地 appsettings 一样读取 Consul 里的配置！
             var msg = _configuration["ConsulTestMessage"];
             return Ok(new { Message = msg });
+        }
+
+        [HttpGet("test-resilience")]
+        public async Task<IActionResult> TestCall()
+        {
+            // 召唤穿戴着“防弹衣”的专属客户端
+            var client = _httpClientFactory.CreateClient("DownstreamServiceClient");
+
+            // 直接发请求！如果下游炸了，底层的重试和熔断机制会自动生效拦截，完美保护当前 API！
+            var response = await client.GetAsync("/api/some-endpoint");
+
+            return Ok(response.StatusCode);
         }
     }
 }
