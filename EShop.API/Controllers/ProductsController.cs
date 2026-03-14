@@ -13,13 +13,15 @@ namespace EShop.API.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductAppService _productAppService;
+        private readonly IConfiguration _configuration;
         private readonly PricingClient _pricingClient;
 
         // 构造函数注入：我们要用 Application 层的服务
-        public ProductsController(IProductAppService productAppService, PricingClient pricingClient)
+        public ProductsController(IProductAppService productAppService, PricingClient pricingClient,IConfiguration configuration)
         {
             _productAppService = productAppService;
             _pricingClient = pricingClient;
+            _configuration = configuration;
         }
 
         // 1. 创建商品接口
@@ -113,6 +115,14 @@ namespace EShop.API.Controllers
         {
             // 人为制造一场灾难！
             throw new Exception("数据库突然原地爆炸了！");
+        }
+
+        [HttpGet("config-test")]
+        public IActionResult GetConfig()
+        {
+            // 直接像读取本地 appsettings 一样读取 Consul 里的配置！
+            var msg = _configuration["ConsulTestMessage"];
+            return Ok(new { Message = msg });
         }
     }
 }

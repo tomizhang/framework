@@ -26,6 +26,7 @@ using Serilog.Events;
 using EShop.API.Security;
 using Microsoft.AspNetCore.Authorization;
 using OpenTelemetry.Metrics; // 引用
+using Winton.Extensions.Configuration.Consul;
 
 
 // 👇 1. 在程序刚跑起来的第一行，就初始化 Serilog 的先遣队
@@ -108,6 +109,26 @@ try
     //    .ReadFrom.Services(services)
     //    .Enrich.FromLogContext());
 
+
+    // 👇 极其霸气的分布式配置中心接入！
+    var env = builder.Environment.EnvironmentName; // 获取当前环境 (比如 Development)
+    builder.Configuration.AddConsul(
+        $"EShop.API/appsettings.{env}.json", // 去 Consul 里找这个名字的配置 (一会我们要去建)
+        options =>
+        {
+            // 1. 告诉它你的 Consul 指挥中心在哪里 (假设在本地 8500)
+            options.ConsulConfigurationOptions = cco => { cco.Address = new Uri("http://localhost:8500"); };
+
+            // 2. 极其核心：开启热更新！Consul 里一改，程序里瞬间生效，不用重启！
+            options.ReloadOnChange = true;
+
+            // 3. 如果 Consul 挂了，系统先别死，继续用本地的 appsettings.json 兜底
+            options.Optional = true;
+
+            // 4. 忽略初次连接失败时的异常
+            options.OnLoadException = exceptionContext => { exceptionContext.Ignore = true; };
+        }
+    );
 
     builder.Services.AddAutoMapper(typeof(EShop.Application.EShopApplicationAutoMapperProfile));
     //jwt ,
