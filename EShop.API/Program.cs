@@ -27,6 +27,7 @@ using EShop.API.Security;
 using Microsoft.AspNetCore.Authorization;
 using OpenTelemetry.Metrics; // 引用
 using Winton.Extensions.Configuration.Consul;
+using System.Security.Claims;
 
 
 // 👇 1. 在程序刚跑起来的第一行，就初始化 Serilog 的先遣队
@@ -49,7 +50,7 @@ try
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .Enrich.WithMachineName() // 👈 让每一条日志都自动带上 MachineName 属性！
-        // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
+                                  // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
         .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}")
     // 👇👇👇 新增这行极其关键的代码：把日志同时发送给 5341 端口的 Seq 👇👇👇
         .WriteTo.Seq("http://localhost:5341"));
@@ -255,12 +256,29 @@ try
                 Console.WriteLine("---------------------------------------------");
                 return Task.CompletedTask;
             },
-            OnTokenValidated = context =>
+            OnTokenValidated =async context =>
             {
                 Console.WriteLine("---------------------------------------------");
                 Console.WriteLine($"[JWT 验证成功] 用户: {context.Principal.Identity.Name}");
                 Console.WriteLine("---------------------------------------------");
-                return Task.CompletedTask;
+
+                // 👇 极其核心的魔法：在请求上下文中，精准抓取你的 RedisCacheService！
+                var redisService = context.HttpContext.RequestServices.GetRequiredService<ICacheService>();
+
+                var userId = context.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    // 👇 去黑名单里查水表！(替换成你实际读取字符串的方法)
+                    var isBlacklisted = await redisService.GetAsync<string>($"blacklist:user:{userId}");
+
+                    if (!string.IsNullOrEmpty(isBlacklisted))
+                    {
+                        // 极其冷酷地拒绝他！
+                        context.Fail("此账号已被管理员强制下线，请重新登录。");
+                    }
+                }
+
             }
         };
     });

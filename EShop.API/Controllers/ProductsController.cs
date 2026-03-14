@@ -1,10 +1,13 @@
-﻿using EShop.Application.Orders.Dtos;
+﻿using EShop.Application.Common.Interfaces;
+using EShop.Application.Orders.Dtos;
 using EShop.Application.Products;
 using EShop.Application.Products.Dtos;
+using EShop.Infrastructure.Caching;
 using EShop.PricingService.Protos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http;
+using System.Security.Claims;
 using static EShop.PricingService.Protos.Pricing;
 
 namespace EShop.API.Controllers
@@ -17,14 +20,19 @@ namespace EShop.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly PricingClient _pricingClient;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ICacheService _cacheService;
 
         // 构造函数注入：我们要用 Application 层的服务
-        public ProductsController(IProductAppService productAppService, PricingClient pricingClient, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        public ProductsController(IProductAppService productAppService,
+            PricingClient pricingClient, IConfiguration configuration, IHttpClientFactory httpClientFactory
+            , ICacheService cacheService
+            )
         {
             _productAppService = productAppService;
             _pricingClient = pricingClient;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _cacheService = cacheService;
         }
 
         // 1. 创建商品接口
@@ -138,6 +146,29 @@ namespace EShop.API.Controllers
             var response = await client.GetAsync("/api/some-endpoint");
 
             return Ok(response.StatusCode);
+        }
+
+        [Authorize]
+        [HttpPost("ping")]
+        public async Task<IActionResult> Ping()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // 👇 2. 极其精简的心跳续签 (注意替换成你实际的方法名和参数格式)
+            await _cacheService.SetAsync($"online:user:{userId}", "active", TimeSpan.FromSeconds(60));
+
+            return Ok();
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("kick/{targetUserId}")]
+        public async Task<IActionResult> KickUser(string targetUserId)
+        {
+            // 👇 3. 极其冷酷的拉黑与踢出连招！
+            await _cacheService.SetAsync($"blacklist:user:{targetUserId}", "kicked", TimeSpan.FromDays(7));
+            await _cacheService.RemoveAsync($"online:user:{targetUserId}");
+
+            return Ok(new { Message = $"用户 {targetUserId} 已被极其无情地踢下线！" });
         }
     }
 }
