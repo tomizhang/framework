@@ -1,0 +1,6 @@
+@EShop.MessageCenter_HostAddress = http://localhost:5252
+
+GET {{EShop.MessageCenter_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

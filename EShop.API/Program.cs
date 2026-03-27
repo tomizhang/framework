@@ -70,17 +70,18 @@ try
     // 极其核心的魔法：一键注入大厂标准弹性策略（包含了超时、重试、熔断三板斧！）
     .AddStandardResilienceHandler(options =>
     {
-        // 1. 重试策略：遇到瞬时网络抖动，系统会自动偷偷重试，最多 3 次。
-        options.Retry.MaxRetryAttempts = 3;
+        // 👇 1. 【新增核心配置】单次请求的超时时间（假设设为 3 秒）
+        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(3);
 
-        // 2. 熔断策略（防雪崩）：如果 10 秒内，失败率超过 10%，直接拉闸断电！
-        options.CircuitBreaker.FailureRatio = 0.1;
+        // 👇 2. 【修复报错的核心】熔断器的统计窗口必须 >= 3秒的2倍（也就是至少 6 秒，我们设为 10 秒，极其安全）
         options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
-        // 拉闸后，系统进入“偷懒休息”状态 30 秒，期间任何请求直接秒回失败，绝不干等！
+
+        // 失败率超过 10% 就会触发熔断拉闸
+        options.CircuitBreaker.FailureRatio = 0.1;
         options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
 
-        // 3. 全局超时：任何请求超过 5 秒不理我，直接强行掐断，抛出超时异常！
-        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(5);
+        // 全局总超时（包含所有重试加起来的时间，通常要比 AttemptTimeout 大得多）
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(15);
     });
 
     builder.Services.AddOpenTelemetry()
