@@ -36,20 +36,22 @@ namespace EShop.API.Middlewares
         {
             context.Response.ContentType = "application/json";
 
-            // 根据异常类型决定状态码 (这里简单统一为 500，也可以根据业务异常细分)
+            // 根据异常类型决定状态码 (这里简单统一为 500)
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            // 👇 极其核心：优先获取 OpenTelemetry/Jaeger 的标准分布式追踪 ID
-            // 如果没有开启分布式追踪，就降级使用 ASP.NET Core 自动生成的请求 ID
             var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
+
+            // 👇 极其核心：强行对齐大厂的统一返回契约 (约定格式)
             var response = new
             {
-                StatusCode = context.Response.StatusCode,
-                Message = "服务器开小差了，请联系管理员", // 生产环境不要把 ex.Message 直接给前端，不安全
-                TraceId = traceId,
-                DetailedError = exception.Message // 开发环境可以把这个加上方便调试
+                code = context.Response.StatusCode, // 之前是 StatusCode -> 统一为 code
+                message = "服务器开小差了，请联系管理员", // 之前是 Message -> 统一为 message
+                data = (object)null, // 之前没有 data -> 极其严谨地补上 data: null，保持格式绝对一致！
+                traceId = traceId, // 之前是大写 -> 统一为小写 traceId
+                detailedError = exception.Message // 保留开发调试用的详细错误
             };
 
+            // 注意：因为这里的序列化没有走 ASP.NET Core MVC 的默认配置，所以我们直接用小写属性名来生成 JSON
             var json = JsonSerializer.Serialize(response);
             return context.Response.WriteAsync(json);
         }

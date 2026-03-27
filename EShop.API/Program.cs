@@ -221,9 +221,10 @@ try
             ValidateIssuer = false,
             ClockSkew = new TimeSpan(5),
             RoleClaimType = "role", // 极其关键：告诉 API 哪个字段是角色
+            NameClaimType = "name",
             ValidTypes = new[] { "at+jwt" },
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MySuperSecretKey_MustBeLongerThan16Chars"))
-
+            
         };
         #endregion
         #region jwt api单体认证
@@ -345,6 +346,43 @@ try
         app.UseSwagger();
         app.UseSwaggerUI();
     }
+
+    app.UseStatusCodePages(async context =>
+    {
+        var response = context.HttpContext.Response;
+        var request = context.HttpContext.Request;
+
+        // 当底层鉴权失败，或者找不到路由时
+        if (response.StatusCode == 401 || response.StatusCode == 403 || response.StatusCode == 404)
+        {
+            // 强制告诉前端：这是一段极其严肃的 JSON 数据！
+            response.ContentType = "application/json; charset=utf-8";
+
+            // 提取我们极其熟悉的链路追踪 ID
+            var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+
+            var message = response.StatusCode switch
+            {
+                401 => "认证失败：您的 Token 已失效或未登录，被安检门极其冷酷地拦下！",
+                403 => "权限不足：您无权调用此机密接口！",
+                404 => "路由迷失：极其抱歉，您访问的接口不存在！",
+                _ => "请求发生未知状态错误"
+            };
+
+            // 套上大厂标准的防弹外壳！
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                code = response.StatusCode,
+                message = message,
+                data = (object)null,
+                traceId = traceId
+            });
+
+            // 绝不妥协：把纯正的 401/403 状态码和包装好的 JSON 一起拍在前端脸上！
+            await response.WriteAsync(result);
+        }
+    });
+
     app.UseRouting();
 
     // ✅ 注册全局异常中间件
