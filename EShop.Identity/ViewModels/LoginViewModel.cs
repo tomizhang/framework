@@ -12,6 +12,6 @@ namespace EShop.Identity.ViewModels
         public string Password { get; set; } = string.Empty;
 
         // 极其重要：记录用户是从哪个业务系统跳过来的，登录完还要跳回去！
-        public string? ReturnUrl { get; set; }
+        public string? ReturnUrl { get; set; } // = "/connect/authorize";
     }
 }

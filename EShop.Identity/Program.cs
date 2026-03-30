@@ -37,8 +37,9 @@ builder.Services.AddAuthentication()
     .AddGitHub(options =>
     {
         // 填入你刚才在 GitHub 申请到的 ID 和 Secret
-        options.ClientId = "Ov2xxxx";
-        options.ClientSecret = "1acf0xxx";
+        //options.ClientId = "Ov23liTy27M0tSnrgCJH";
+        options.ClientId = "Ov23liTy27M0tSnrgCJH";
+        options.ClientSecret = "bf2d40a93ec5c77b4e7b2f9134ecb179bfa933c1";
 
         // 我们想获取用户的邮箱，所以加上这个 Scope
         options.Scope.Add("user:email");

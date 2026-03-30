@@ -21,8 +21,15 @@ namespace EShop.Identity.Controllers
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
-            ViewData["ReturnUrl"] = returnUrl;
-            return View();
+            //ViewData["ReturnUrl"] = returnUrl;
+            //return View();
+            // 👇 2. 极其核心：把它塞进你的 ViewModel 里！
+            var model = new LoginViewModel
+            {
+                ReturnUrl = returnUrl
+            };
+
+            return View(model);
         }
 
         // 2. 接收用户提交的账号密码
