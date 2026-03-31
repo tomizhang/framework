@@ -61,4 +61,8 @@
     <Protobuf Include="Protos\pricing.proto" GrpcServices="Client" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Logs\" />
+  </ItemGroup>
+
 </Project>

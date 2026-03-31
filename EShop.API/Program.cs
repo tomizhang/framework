@@ -44,6 +44,8 @@ try
     Log.Information("正在启动 EShop.API 微服务...");
     var builder = WebApplication.CreateBuilder(args);
 
+    var seqAddr = builder.Configuration["Jaeger"];
+
     // 👇 2. 极其关键：用 Serilog 彻底替换掉系统默认的日志组件
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
@@ -53,7 +55,7 @@ try
                                   // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
         .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}")
     // 👇👇👇 新增这行极其关键的代码：把日志同时发送给 5341 端口的 Seq 👇👇👇
-        .WriteTo.Seq("http://localhost:5341"));
+        .WriteTo.Seq(seqAddr));
     // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
     // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"
     var serviceName = builder.Environment.ApplicationName;
@@ -65,7 +67,7 @@ try
     builder.Services.AddHttpClient("DownstreamServiceClient", client =>
     {
         // 假设这是你要调用的下游服务地址
-        client.BaseAddress = new Uri("http://localhost:5001");
+        client.BaseAddress = new Uri(builder.Configuration["IdentiyHost"]);
     })
     // 极其核心的魔法：一键注入大厂标准弹性策略（包含了超时、重试、熔断三板斧！）
     .AddStandardResilienceHandler(options =>
@@ -97,21 +99,22 @@ try
                 // 3. 把收集到的追踪数据，通过 OTLP gRPC 协议发送给本地的 Jaeger 侦探
                 .AddOtlpExporter(opts =>
                 {
-                    opts.Endpoint = new Uri("http://localhost:4317");
+                    var jaegerAddr = builder.Configuration["Jaeger"];
+                    opts.Endpoint = new Uri(jaegerAddr);
                 });
         })
         .WithMetrics(metrics =>
         {
             metrics
-                        // 1. 【修复 CS1929】直接监听 .NET 8 内置的 API 和 Web 服务器原声指标！
-                        .AddMeter("Microsoft.AspNetCore.Hosting")
-                        .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
+            // 1. 【修复 CS1929】直接监听 .NET 8 内置的 API 和 Web 服务器原声指标！
+            .AddMeter("Microsoft.AspNetCore.Hosting")
+            .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
 
-                        // 2. 运行时底层监控（CPU、内存等）保持不变
-                        .AddRuntimeInstrumentation()
+            // 2. 运行时底层监控（CPU、内存等）保持不变
+            .AddRuntimeInstrumentation()
 
-                        // 3. 导出给 Prometheus
-                        .AddPrometheusExporter();
+            // 3. 导出给 Prometheus
+            .AddPrometheusExporter();
         }); ;
 
     // Add services to the container.
@@ -141,7 +144,7 @@ try
         options =>
         {
             // 1. 告诉它你的 Consul 指挥中心在哪里 (假设在本地 8500)
-            options.ConsulConfigurationOptions = cco => { cco.Address = new Uri("http://localhost:8500"); };
+            options.ConsulConfigurationOptions = cco => { cco.Address = new Uri(builder.Configuration["IdentiyHost"]); };
 
             // 2. 极其核心：开启热更新！Consul 里一改，程序里瞬间生效，不用重启！
             options.ReloadOnChange = true;
@@ -200,7 +203,7 @@ try
     .AddJwtBearer(options =>
     {
         #region 统一认证中心
-        options.Authority = "https://localhost:5001";
+        options.Authority = builder.Configuration["IdentiyHost"];
         options.RequireHttpsMetadata = false;
         // 👇👇👇 击杀隐藏 Boss：无视本地 HTTPS 证书安全警告，强制放行请求 👇👇👇
         //options.BackchannelHttpHandler = new HttpClientHandler
@@ -215,7 +218,7 @@ try
         options.TokenValidationParameters = new TokenValidationParameters
         {
             //https://localhost:5001/.well-known/jwks
-            ValidIssuer = "https://localhost:5001",
+            ValidIssuer = builder.Configuration["IdentiyHost"],
             ValidateIssuerSigningKey = false,
             ValidateAudience = false,
             ValidateIssuer = false,

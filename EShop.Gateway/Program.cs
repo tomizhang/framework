@@ -18,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. 加载 ocelot.json 配置文件
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
+var seqAddr = builder.Configuration["Jaeger"];
 // ?? 2. 极其关键：用 Serilog 彻底替换掉系统默认的日志组件
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
@@ -25,7 +26,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.FromLogContext()
     // 这里的 outputTemplate 是魔法！我们把 OpenTelemetry 的 TraceId 也打印出来！
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [TraceId: {TraceId}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.Seq("http://localhost:5341"));
+    .WriteTo.Seq(seqAddr));
 
 // 定义当前服务的名字（在 Jaeger 界面里显示的分类名）
 // 网关项目写 "EShop.Gateway"，API 项目写 "EShop.API"
@@ -44,7 +45,8 @@ builder.Services.AddOpenTelemetry()
             // 3. 把收集到的追踪数据，通过 OTLP gRPC 协议发送给本地的 Jaeger 侦探
             .AddOtlpExporter(opts =>
             {
-                opts.Endpoint = new Uri("http://localhost:4317");
+                var jaegerAddr = builder.Configuration["Jaeger"];
+                opts.Endpoint = new Uri(jaegerAddr);
             });
     });
 
@@ -53,7 +55,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSPA", policy =>
     {
-        policy.WithOrigins("http://localhost:7002") // 允许前端地址
+        var cors = builder.Configuration.GetSection("Cors").Get<List<string>>();
+        var corsString = "";
+        if(cors is not null && cors.Count > 0)
+        {
+            corsString = string.Join(',',cors);
+        }
+
+        policy.WithOrigins(corsString) // 允许前端地址
               .AllowAnyHeader()
               .AllowAnyMethod();
     });

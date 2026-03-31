@@ -34,7 +34,6 @@
     "TimeoutValue": 5000 // 5 秒超时
   },
   "GlobalConfiguration": {
-    "BaseUrl": "http://localhost:9000",
     "ServiceDiscoveryProvider": {
       "Host": "localhost",
       "Port": 8500,

@@ -1,12 +1,24 @@
 ﻿using EShop.Identity;
 using EShop.Identity.Data;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using System.Text; // 引用
+using EShop.Identity.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    // 告诉 .NET：虽然我是 HTTP 接客，但外面的云端大佬已经做过 HTTPS 校验了！
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // 👇 1. 添加 CORS 策略：允许 7002 访问网关
 builder.Services.AddCors(options =>
@@ -20,11 +32,20 @@ builder.Services.AddCors(options =>
 });
 
 // 1. 配置数据库 (使用内存数据库，为了快速演示)
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//{
+//    options.UseInMemoryDatabase(nameof(ApplicationDbContext));
+
+//    // 注册 OpenIddict 的实体 (Client, Authorization, Token 等)
+//    options.UseOpenIddict();
+//});
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseInMemoryDatabase(nameof(ApplicationDbContext));
+    // 读取连接字符串，连接咱们 docker-compose 里的 pg-database
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 
-    // 注册 OpenIddict 的实体 (Client, Authorization, Token 等)
+    // 👇 极其关键：告诉 EF Core，你肚子里装了 OpenIddict 的实体！
     options.UseOpenIddict();
 });
 
@@ -115,6 +136,37 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHostedService<TestDataWorker>();
 
 var app = builder.Build();
+
+// 👇 极其规范的作用域管理：用完即毁，绝不占用内存
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        // 1. 获取你的数据库上下文 (如果你的名字叫 ApplicationDbContext 就换一下)
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+
+        // 2. 极其暴力的绝杀：如果数据库没建就建，有没跑的 Migration 就全部跑完！
+        // ⚠️ 极其关键：绝对不要用 EnsureCreated()！必须用 Migrate()，否则后续无法做迁移更新！
+        dbContext.Database.Migrate();
+
+        // 3. 极其丝滑的种子数据播种（比如初始化你的 eshop_web_spa 客户端）
+        // var openIddictManager = services.GetRequiredService<IOpenIddictApplicationManager>();
+        // await SeedDataAsync(openIddictManager); 
+
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("极其完美：数据库初始化与迁移彻底完成！");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogCritical(ex, "极其惨烈：数据库自动迁移在启动时翻车了！");
+        // 可以在这里 throw，让容器挂掉重启重试
+        throw;
+    }
+}
+
+app.UseForwardedHeaders();
 
 app.UseCors("AllowSPA");
 
