@@ -5,6 +5,8 @@
 <head>
     <meta charset="utf-8" />
     <title>EShop 统一认证中心</title>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 300px; }
@@ -19,31 +21,27 @@
 </head>
 <body>
     <div class="login-box">
-        <h2>登录</h2>
-
+        <h2>登录 EShop</h2>
         <form asp-controller="Account" asp-action="Login" method="post">
             <input type="hidden" asp-for="ReturnUrl" />
 
-            <div asp-validation-summary="ModelOnly" class="error"></div>
-
             <div class="form-group">
-                <label>用户名 (admin)</label>
-                <input asp-for="Username" placeholder="请输入用户名" />
+                <label>用户名 / 邮箱</label>
+                <input asp-for="Username" type="text" placeholder="请输入账号" required />
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input asp-for="Password" type="password" placeholder="请输入密码" required />
             </div>
 
-            <div class="form-group">
-                <label>密码 (Password123!)</label>
-                <input asp-for="Password" type="password" placeholder="请输入密码" />
-            </div>
+            <div class="cf-turnstile" data-sitekey="0x4AAAAAACy1FXISEDvBnnJn" style="margin-bottom: 15px;"></div>
 
             <button type="submit" class="btn-submit">登 录</button>
         </form>
 
-        <form asp-controller="Account" asp-action="Login" method="post">
-           </form>
-
         <hr style="margin: 20px 0;" />
-        <form asp-controller="Account" asp-action="ExternalLogin" method="post">
+        <div>
+          <form asp-controller="Account" asp-action="ExternalLogin" method="post">
             <input type="hidden" name="returnUrl" value="@Model?.ReturnUrl" />
             
             <button type="submit" name="provider" value="GitHub" 
@@ -52,6 +50,8 @@
                 使用 GitHub 登录
             </button>
         </form>
-    </div>
+        </div>
+        </div>
+
 </body>
 </html>

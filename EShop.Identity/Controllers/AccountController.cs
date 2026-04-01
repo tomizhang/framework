@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
 using System.Security.Claims;
 
 namespace EShop.Identity.Controllers
@@ -11,10 +12,14 @@ namespace EShop.Identity.Controllers
     {
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly UserManager<IdentityUser> _userManager;
-        public AccountController(SignInManager<IdentityUser> signInManager, UserManager<IdentityUser> userManager)
+        private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
+        public AccountController(SignInManager<IdentityUser> signInManager, UserManager<IdentityUser> userManager,IConfiguration configuration,IHttpClientFactory httpClientFactory)
         {
             _signInManager = signInManager;
             _userManager = userManager;
+            _configuration = configuration; 
+            _httpClientFactory = httpClientFactory;
         }
 
         // 1. 展示登录页面 (当未登录时，系统会自动跳到这里 /Account/Login)
@@ -37,11 +42,30 @@ namespace EShop.Identity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
+
             ViewData["ReturnUrl"] = model.ReturnUrl;
 
+            // ==========================================
+            // 🚨 极其冷酷的第一道防线：Turnstile 令牌校验
+            // ==========================================
+            if (string.IsNullOrEmpty(model.TurnstileToken))
+            {
+                ModelState.AddModelError(string.Empty, "极其危险：缺少人机验证令牌！");
+                return View(model);
+            }
+
+            var isHuman = await VerifyTurnstileAsync(model.TurnstileToken);
+            if (!isHuman)
+            {
+                ModelState.AddModelError(string.Empty, "极其抱歉：Cloudflare 判定您为机器人或验证已失效！");
+                return View(model);
+            }
+
+            // ==========================================
+            // 🛡️ 验证通过，放行进入核心登录逻辑 (保持你原来的代码)
+            // ==========================================
             if (ModelState.IsValid)
             {
-                // 调用系统自带的密码验证机制 (注意我们在 TestDataWorker 里建的密码是 Password123!)
                 var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, isPersistent: false, lockoutOnFailure: false);
 
                 if (result.Succeeded)
@@ -58,8 +82,27 @@ namespace EShop.Identity.Controllers
                 ModelState.AddModelError(string.Empty, "账号或密码错误。");
             }
 
-            // 登录失败，重新显示页面并带上错误提示
             return View(model);
+        }
+
+
+        // 极其优雅的私有方法：向 Cloudflare 查验 Token
+        private async Task<bool> VerifyTurnstileAsync(string token)
+        {
+            var secretKey = _configuration["Cloudflare:TurnstileSecret"];
+            var client = _httpClientFactory.CreateClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+        new KeyValuePair<string, string>("secret", secretKey!),
+        new KeyValuePair<string, string>("response", token)
+    });
+
+            var response = await client.PostAsync("https://challenges.cloudflare.com/turnstile/v0/siteverify", content);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var jsonString = await response.Content.ReadAsStringAsync();
+            using var jsonDoc = System.Text.Json.JsonDocument.Parse(jsonString);
+            return jsonDoc.RootElement.GetProperty("success").GetBoolean();
         }
 
         // 👇 1. 用户点击 GitHub 登录按钮时，触发这个动作，把人踢到 GitHub 去

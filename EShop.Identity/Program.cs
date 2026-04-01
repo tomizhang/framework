@@ -135,6 +135,8 @@ builder.Services.AddControllersWithViews();
 // --- 自动初始化数据的后台任务 (下面会写) ---
 builder.Services.AddHostedService<TestDataWorker>();
 
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // 👇 极其规范的作用域管理：用完即毁，绝不占用内存
