@@ -1,0 +1,105 @@
+services:
+  # ==========================================
+  # 基础设施层：微服务的“四大金刚”
+  # ==========================================
+
+  # 1. 极其稳健的关系型数据库：PostgreSQL
+  pg-database:
+    image: postgres:15-alpine
+    container_name: eshop_postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password # ⚠️ 极其关键：请务必修改密码！
+      - POSTGRES_DB=EShop_Identity
+    ports:
+      - "5431:5432" # 极其大方地暴露给宿主机，方便你用 Navicat/DataGrip 直接连上去调试
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # 极其核心的持久化
+
+  # 2. 极其暴力的内存缓存：Redis
+  # redis:
+    # image: redis:7-alpine
+    # container_name: eshop_redis
+    # restart: always
+    # command: redis-server --requirepass YourRedisPwd123! # 极其冷酷地开启密码验证
+    # ports:
+      # - "6379:6379"
+    # volumes:
+      # - redis_data:/data # RDB/AOF 持久化挂载
+
+  # 3. 极其优雅的结构化日志中心：Seq
+  # seq:
+    # image: datalust/seq:latest
+    # container_name: eshop_seq
+    # restart: always
+    # environment:
+      # - ACCEPT_EULA=Y # 极其霸气地自动接受官方协议
+    # ports:
+      # - "8082:80"    # 浏览器访问 Seq UI 的端口 (http://localhost:8082)
+      # # 5341 是内部接收 .NET 日志的端口，不暴露给外部，只在虚拟局域网内流通
+    # volumes:
+      # - seq_data:/data
+
+  # 4. 极其硬核的分布式链路追踪：Jaeger (All-in-one)
+  # jaeger:
+    # image: jaegertracing/all-in-one:latest
+    # container_name: eshop_jaeger
+    # restart: always
+    # environment:
+      # - COLLECTOR_OTLP_ENABLED=true # 极其关键：专门为 .NET 8 的 OpenTelemetry 开启 OTLP 接收器！
+    # ports:
+      # - "16686:16686" # 浏览器访问 Jaeger UI 的端口 (http://localhost:16686)
+      # - "4317:4317"   # OTLP gRPC 接收端口 (给 .NET 8 用的)
+      # - "4318:4318"   # OTLP HTTP 接收端口
+
+  # ==========================================
+  # 业务服务层：你的核心代码
+  # ==========================================
+
+  auth-api:
+    image: eshop-identity:latest 
+    container_name: eshop-identity
+    environment:
+      - ASPNETCORE_URLS=http://+:8080 
+      - ASPNETCORE_ENVIRONMENT=Production
+      # 👇 极其丝滑的环境变量注入：让 Auth 服务直接连上基础设施！
+      - ConnectionStrings__DefaultConnection=Host=pg-database;Port=5432;Database=EShop_Identity;Username=postgres;Password=password;
+      #- ConnectionStrings__Redis=redis:6379,password=YourRedisPwd123!
+    depends_on:
+      - pg-database
+      #- redis
+
+  shop-gateway:
+    image: eshop-gateway:latest 
+    container_name: eshop-gateway
+    ports:
+      - "8081:7200"
+    environment:
+      - ASPNETCORE_URLS=http://+:7200 
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - auth-api
+      #- redis
+
+  # ==========================================
+  # 边缘网关层：隐身穿透特工
+  # ==========================================
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: eshop_cf_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiOTdiNDViZDE5YTVmYWY0NThiZjY4MGZiMjU5YmVjMDQiLCJ0IjoiZWY5OWYyMmUtMTE3OC00YjY1LWJkYzEtYmQ3M2MwN2RmOGRmIiwicyI6Ik1UTm1ZakF3TXpNdE1XSXpOQzAwWm1SaUxXSTNZekF0WWpjelpUSTRNVGN5WWpVNSJ9
+    depends_on:
+      - auth-api
+
+# ==========================================
+# 极其神圣的持久化卷声明（千万不能漏！）
+# ==========================================
+volumes:
+  postgres_data:
+  # redis_data:
+  # seq_data:
